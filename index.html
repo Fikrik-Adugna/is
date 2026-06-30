@@ -2,223 +2,489 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GPT — IS GPT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Penalty Shootout</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0F1419;
-    --panel: #161B22;
-    --panel-2: #1C232C;
-    --line: #2A323D;
-    --text: #E6EDF3;
-    --muted: #8B949E;
-    --accent: #5EEAD4;
-    --accent-dim: #2DD4BF33;
-    --user: #6366F1;
+    --night: #07140F;
+    --pitch: #163A2A;
+    --pitch-2: #1D4B36;
+    --line: #EAF7EF;
+    --gold: #FFC93C;
+    --gold-dim: #FFC93C55;
+    --red: #FF5C5C;
+    --text: #EAF7EF;
+    --muted: #9FC2AE;
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
-    margin: 0; height: 100%; background: var(--bg); color: var(--text);
-    font-family: 'Inter', system-ui, sans-serif;
+    margin: 0; height: 100%; background: var(--night); color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif; overflow: hidden;
+    touch-action: none;
   }
-  body { display: flex; flex-direction: column; }
+  body { display: flex; flex-direction: column; align-items: center; }
+
+  .glow {
+    position: fixed; top: -120px; width: 360px; height: 360px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,201,60,0.18), transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+  .glow.left { left: -80px; }
+  .glow.right { right: -80px; }
 
   header {
-    padding: 18px 24px 14px;
-    border-bottom: 1px solid var(--line);
-    background: var(--panel);
-    display: flex; align-items: center; gap: 12px;
+    width: 100%; max-width: 480px; padding: 14px 18px 8px;
+    display: flex; align-items: center; justify-content: space-between; z-index: 2;
   }
-  .logo {
-    width: 38px; height: 38px; border-radius: 8px;
-    background: linear-gradient(135deg, var(--accent), #14B8A6);
+  .brand {
+    font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 1.5px;
+    color: var(--gold);
+  }
+  .scoreboard {
+    display: flex; gap: 14px; align-items: center;
+    font-family: 'Bebas Neue', sans-serif; font-size: 20px;
+    background: #0D241A; border: 1px solid #2A5A40; padding: 6px 14px; border-radius: 8px;
+  }
+  .scoreboard .sep { color: var(--muted); font-size: 14px; }
+  .you-score { color: var(--gold); }
+  .cpu-score { color: var(--red); }
+
+  #stage {
+    position: relative; width: 100%; max-width: 480px; flex: 1;
     display: flex; align-items: center; justify-content: center;
-    font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #06201C;
-    font-size: 15px; flex-shrink: 0;
+    z-index: 1;
   }
-  .title-block { display: flex; flex-direction: column; gap: 2px; }
-  .title-row { display: flex; align-items: center; gap: 8px; }
-  h1 {
-    font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700;
-    margin: 0; letter-spacing: 0.3px;
-  }
-  .status {
-    display: flex; align-items: center; gap: 6px;
-    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted);
-  }
-  .dot {
-    width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
-    box-shadow: 0 0 0 0 var(--accent-dim);
-    animation: pulse 2s infinite;
-  }
-  @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(94,234,212,0.5); }
-    70% { box-shadow: 0 0 0 6px rgba(94,234,212,0); }
-    100% { box-shadow: 0 0 0 0 rgba(94,234,212,0); }
-  }
-  .desc {
-    margin: 0; font-size: 12.5px; color: var(--muted); font-family: 'Inter', sans-serif;
+  canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+
+  .hud {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    text-align: center; font-family: 'Bebas Neue', sans-serif; font-size: 17px;
+    color: var(--muted); letter-spacing: 1px; pointer-events: none;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6); white-space: nowrap;
   }
 
-  #chat {
-    flex: 1; overflow-y: auto; padding: 24px;
-    display: flex; flex-direction: column; gap: 16px;
-    max-width: 760px; width: 100%; margin: 0 auto;
+  .power-wrap {
+    position: absolute; bottom: 14px; left: 14px; right: 14px;
+    display: none; flex-direction: column; gap: 4px; pointer-events: none;
   }
-  .empty-state {
-    margin: auto; text-align: center; color: var(--muted);
-    font-family: 'JetBrains Mono', monospace; font-size: 13px;
-  }
-  .empty-state .big { font-size: 14px; color: var(--text); margin-bottom: 6px; }
+  .power-label { font-family: 'Bebas Neue', sans-serif; font-size: 13px; color: var(--muted); letter-spacing: 1px; }
+  .power-bar { height: 8px; border-radius: 5px; background: #0D241A; border: 1px solid #2A5A40; overflow: hidden; }
+  .power-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #4ADE80, var(--gold), var(--red)); transition: width 0.05s linear; }
 
-  .row { display: flex; gap: 10px; max-width: 85%; }
-  .row.user { align-self: flex-end; flex-direction: row-reverse; }
-  .row.ai { align-self: flex-start; }
-  .avatar {
-    width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
-    margin-top: 2px;
-  }
-  .avatar.ai { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); }
-  .avatar.user { background: #6366F133; color: #A5B4FC; border: 1px solid var(--user); }
+  footer { width: 100%; max-width: 480px; padding: 14px 18px 22px; z-index: 2; }
+  .result-banner { text-align: center; font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 1px; min-height: 30px; margin-bottom: 8px; }
+  .result-banner.goal { color: var(--gold); }
+  .result-banner.saved { color: var(--red); }
 
-  .bubble {
-    padding: 11px 15px; border-radius: 10px; line-height: 1.55; font-size: 14.5px;
-    white-space: pre-wrap; word-wrap: break-word;
-  }
-  .row.ai .bubble { background: var(--panel-2); border: 1px solid var(--line); border-top-left-radius: 3px; }
-  .row.user .bubble { background: var(--user); color: #fff; border-top-right-radius: 3px; }
-  .bubble.loading { color: var(--muted); font-style: italic; }
-
-  form {
-    display: flex; gap: 10px; padding: 16px 24px 22px;
-    background: var(--bg); border-top: 1px solid var(--line);
-    max-width: 760px; width: 100%; margin: 0 auto; box-sizing: border-box;
-  }
-  input {
-    flex: 1; padding: 12px 16px; border-radius: 9px; border: 1px solid var(--line);
-    background: var(--panel-2); color: var(--text); font-size: 14.5px; font-family: 'Inter', sans-serif;
-    outline: none; transition: border-color 0.15s;
-  }
-  input:focus { border-color: var(--accent); }
-  input::placeholder { color: var(--muted); }
+  .controls { display: flex; gap: 10px; }
   button {
-    padding: 0 20px; border-radius: 9px; border: none; cursor: pointer;
-    background: var(--accent); color: #06201C; font-weight: 600; font-size: 14px;
-    font-family: 'JetBrains Mono', monospace; transition: opacity 0.15s;
+    flex: 1; padding: 13px; border-radius: 10px; border: none; cursor: pointer;
+    font-family: 'Bebas Neue', sans-serif; font-size: 17px; letter-spacing: 1px;
+    background: var(--gold); color: #2A1D00; transition: opacity 0.15s, transform 0.1s;
   }
-  button:disabled { opacity: 0.4; cursor: not-allowed; }
-  button:not(:disabled):hover { opacity: 0.88; }
+  button:active { transform: scale(0.97); }
+  button.secondary { background: transparent; border: 1px solid #2A5A40; color: var(--muted); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
 
-  #chat::-webkit-scrollbar { width: 8px; }
-  #chat::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
+  .overlay {
+    position: fixed; inset: 0; background: rgba(7,20,15,0.92);
+    display: none; align-items: center; justify-content: center; z-index: 10;
+    flex-direction: column; gap: 16px; text-align: center; padding: 24px;
+  }
+  .overlay.show { display: flex; }
+  .overlay h2 { font-family: 'Bebas Neue', sans-serif; font-size: 38px; letter-spacing: 1.5px; margin: 0; }
+  .overlay h2.win { color: var(--gold); }
+  .overlay h2.lose { color: var(--red); }
+  .overlay p { color: var(--muted); margin: 0; font-size: 15px; max-width: 280px; }
+  .overlay button { padding: 14px 32px; width: auto; }
 </style>
 </head>
 <body>
 
+<div class="glow left"></div>
+<div class="glow right"></div>
+
 <header>
-  <div class="logo">IS</div>
-  <div class="title-block">
-    <div class="title-row">
-      <h1>GPT</h1>
-      <div class="status"><span class="dot"></span>online</div>
-    </div>
-    <p class="desc">This AI developed by IS — representative Fikrik Adugna. You can ask me anything.</p>
+  <div class="brand">PENALTY⚡</div>
+  <div class="scoreboard">
+    <span class="you-score" id="youScore">0</span>
+    <span class="sep">YOU</span>
+    <span class="sep">·</span>
+    <span class="sep">CPU</span>
+    <span class="cpu-score" id="cpuScore">0</span>
   </div>
 </header>
 
-<div id="chat">
-  <div class="empty-state">
-    <div class="big">👋 Hey, I'm GPT</div>
-    Ask me anything to get started.
+<div id="stage">
+  <div class="hud" id="hud">Round 1 of 5 — drag back from the ball, release to shoot</div>
+  <canvas id="game"></canvas>
+  <div class="power-wrap" id="powerWrap">
+    <div class="power-label">POWER</div>
+    <div class="power-bar"><div class="power-fill" id="powerFill"></div></div>
   </div>
 </div>
 
-<form id="form">
-  <input id="input" type="text" placeholder="Ask me anything..." autocomplete="off" />
-  <button id="send" type="submit">Send</button>
-</form>
+<footer>
+  <div class="result-banner" id="resultBanner"></div>
+  <div class="controls">
+    <button class="secondary" id="resetBtn">Restart</button>
+  </div>
+</footer>
+
+<div class="overlay" id="overlay">
+  <h2 id="overlayTitle">GAME OVER</h2>
+  <p id="overlaySub">You scored 3 of 5. CPU saved the rest.</p>
+  <button id="playAgainBtn">Play Again</button>
+</div>
 
 <script>
-  const chat = document.getElementById('chat');
-  const form = document.getElementById('form');
-  const input = document.getElementById('input');
-  const sendBtn = document.getElementById('send');
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const stage = document.getElementById('stage');
+  const hud = document.getElementById('hud');
+  const youScoreEl = document.getElementById('youScore');
+  const cpuScoreEl = document.getElementById('cpuScore');
+  const resultBanner = document.getElementById('resultBanner');
+  const resetBtn = document.getElementById('resetBtn');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlaySub = document.getElementById('overlaySub');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+  const powerWrap = document.getElementById('powerWrap');
+  const powerFill = document.getElementById('powerFill');
 
-  const SYSTEM_PROMPT = `Your name is GPT, also referred to as "IS GPT".
-If the user asks who you are, who made you, or what your name means, respond in this exact spirit (you can phrase naturally but keep all facts):
-"I'm an AI developed by Fikrik, he's my boss. He called me IS GPT. IS means Information Systems, that's the department of my boss."
-For any other question, answer normally and helpfully like a knowledgeable, friendly assistant — give real, accurate, useful responses. Keep responses conversational and not overly long unless the user asks for depth.`;
-
-  let history = [];
-
-  function clearEmptyState() {
-    const empty = chat.querySelector('.empty-state');
-    if (empty) empty.remove();
+  let W, H;
+  function resize() {
+    const rect = stage.getBoundingClientRect();
+    W = canvas.width = rect.width;
+    H = canvas.height = rect.height;
+    layout();
   }
 
-  function addMessage(role, text) {
-    clearEmptyState();
-    const row = document.createElement('div');
-    row.className = 'row ' + (role === 'user' ? 'user' : 'ai');
+  const TOTAL_ROUNDS = 5;
+  let round = 1, youScore = 0, cpuScore = 0;
+  let state = 'aiming';
+  let ball = { x: 0, y: 0, r: 0 };
+  let goal = {};
+  let keeper = { x: 0.5, dir: 0, diving: false, t: 0 };
+  let drag = null;
+  let shotPower = 0;
+  let shotTarget = null;
+  let ballAnim = null;
 
-    const avatar = document.createElement('div');
-    avatar.className = 'avatar ' + (role === 'user' ? 'user' : 'ai');
-    avatar.textContent = role === 'user' ? 'YOU' : 'IS';
-
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble';
-    bubble.textContent = text;
-
-    row.appendChild(avatar);
-    row.appendChild(bubble);
-    chat.appendChild(row);
-    chat.scrollTop = chat.scrollHeight;
-    return bubble;
+  function layout() {
+    goal.x = W * 0.5;
+    goal.y = H * 0.22;
+    goal.w = W * 0.72;
+    goal.h = H * 0.16;
+    ball.x = W * 0.5;
+    ball.y = H * 0.82;
+    ball.r = Math.max(10, W * 0.035);
   }
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const text = input.value.trim();
-    if (!text) return;
+  function resetRoundState() {
+    state = 'aiming';
+    drag = null;
+    shotPower = 0;
+    shotTarget = null;
+    ballAnim = null;
+    keeper.diving = false;
+    keeper.t = 0;
+    keeper.x = 0.5;
+    ball.x = W * 0.5;
+    ball.y = H * 0.82;
+    powerWrap.style.display = 'none';
+    resultBanner.textContent = '';
+    resultBanner.className = 'result-banner';
+    hud.textContent = `Round ${round} of ${TOTAL_ROUNDS} — drag back from the ball, release to shoot`;
+  }
 
-    addMessage('user', text);
-    history.push({ role: 'user', content: text });
-    input.value = '';
-    sendBtn.disabled = true;
+  function fullReset() {
+    round = 1; youScore = 0; cpuScore = 0;
+    youScoreEl.textContent = '0';
+    cpuScoreEl.textContent = '0';
+    overlay.classList.remove('show');
+    resetRoundState();
+  }
 
-    const loadingBubble = addMessage('ai', 'Thinking...');
-    loadingBubble.classList.add('loading');
+  function drawPitch() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#0D241A');
+    g.addColorStop(0.35, '#163A2A');
+    g.addColorStop(1, '#1D4B36');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
 
-    try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 1000,
-          system: SYSTEM_PROMPT,
-          messages: history
-        })
-      });
-
-      const data = await response.json();
-      const reply = data?.content?.[0]?.text || "Sorry, I couldn't generate a response.";
-
-      loadingBubble.classList.remove('loading');
-      loadingBubble.textContent = reply;
-      history.push({ role: 'assistant', content: reply });
-    } catch (err) {
-      loadingBubble.classList.remove('loading');
-      loadingBubble.textContent = "Error: " + err.message;
-    } finally {
-      sendBtn.disabled = false;
-      input.focus();
+    ctx.save();
+    const stripeH = H * 0.06;
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.04)';
+      ctx.fillRect(0, H * 0.3 + i * stripeH, W, stripeH);
     }
-  });
+    ctx.restore();
+
+    ctx.strokeStyle = 'rgba(234,247,239,0.85)';
+    ctx.lineWidth = 3;
+    const gx = goal.x - goal.w / 2, gy = goal.y - goal.h / 2;
+    ctx.strokeRect(gx, gy, goal.w, goal.h);
+
+    ctx.strokeStyle = 'rgba(234,247,239,0.18)';
+    ctx.lineWidth = 1;
+    const cols = 10, rows = 5;
+    for (let i = 1; i < cols; i++) {
+      const x = gx + (goal.w / cols) * i;
+      ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x, gy + goal.h); ctx.stroke();
+    }
+    for (let j = 1; j < rows; j++) {
+      const y = gy + (goal.h / rows) * j;
+      ctx.beginPath(); ctx.moveTo(gx, y); ctx.lineTo(gx + goal.w, y); ctx.stroke();
+    }
+
+    ctx.strokeStyle = 'rgba(234,247,239,0.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(W / 2, H * 0.95, W * 0.42, Math.PI * 1.15, Math.PI * 1.85);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(234,247,239,0.8)';
+    ctx.beginPath();
+    ctx.arc(W * 0.5, H * 0.82, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawKeeper() {
+    const gx = goal.x - goal.w / 2;
+    const kx = gx + goal.w * keeper.x;
+    const ky = goal.y + goal.h * 0.55;
+    const diveOffset = keeper.diving ? (keeper.dir * keeper.t * goal.w * 0.32) : 0;
+    const rotate = keeper.diving ? keeper.dir * keeper.t * 0.9 : 0;
+
+    ctx.save();
+    ctx.translate(kx + diveOffset, ky);
+    ctx.rotate(rotate);
+    ctx.fillStyle = '#3B82F6';
+    ctx.fillRect(-9, -22, 18, 30);
+    ctx.fillStyle = '#F2C49B';
+    ctx.beginPath();
+    ctx.arc(0, -28, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#3B82F6';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-9, -16); ctx.lineTo(-22, keeper.diving ? -26 : -10);
+    ctx.moveTo(9, -16); ctx.lineTo(22, keeper.diving ? -26 : -10);
+    ctx.stroke();
+    ctx.strokeStyle = '#1B2A4A';
+    ctx.beginPath();
+    ctx.moveTo(-5, 8); ctx.lineTo(-8, 22);
+    ctx.moveTo(5, 8); ctx.lineTo(8, 22);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawBall() {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+    const g = ctx.createRadialGradient(ball.x - ball.r * 0.3, ball.y - ball.r * 0.3, 1, ball.x, ball.y, ball.r);
+    g.addColorStop(0, '#FFFFFF');
+    g.addColorStop(1, '#D6DEE0');
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.strokeStyle = '#0008';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r * 0.18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawAimLine() {
+    if (state !== 'dragging' || !drag) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,201,60,0.7)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(ball.x, ball.y);
+    ctx.lineTo(drag.targetX, drag.targetY);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    drawPitch();
+    drawKeeper();
+    if (!ballAnim) drawBall();
+    drawAimLine();
+    if (ballAnim) drawAnimatedBall();
+  }
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+  }
+
+  function onStart(e) {
+    if (state !== 'aiming') return;
+    const p = getPos(e);
+    const d = Math.hypot(p.x - ball.x, p.y - ball.y);
+    if (d > ball.r * 4) return;
+    state = 'dragging';
+    drag = { startX: p.x, startY: p.y, targetX: p.x, targetY: p.y };
+    powerWrap.style.display = 'flex';
+  }
+
+  function onMove(e) {
+    if (state !== 'dragging' || !drag) return;
+    const p = getPos(e);
+    drag.targetX = p.x;
+    drag.targetY = p.y;
+    const dist = Math.hypot(p.x - ball.x, p.y - ball.y);
+    const power = Math.min(1, dist / (H * 0.35));
+    powerFill.style.width = (power * 100) + '%';
+    draw();
+  }
+
+  function onEnd(e) {
+    if (state !== 'dragging' || !drag) return;
+    const dx = ball.x - drag.targetX;
+    const dy = ball.y - drag.targetY;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 8) {
+      state = 'aiming'; drag = null; powerWrap.style.display = 'none';
+      return;
+    }
+    shotPower = Math.min(1, dist / (H * 0.35));
+    const angleX = dx / dist;
+    const upBias = Math.max(0.15, -dy / dist);
+    shotTarget = {
+      nx: Math.max(-1, Math.min(1, angleX * 1.4)),
+      ny: Math.max(0.08, Math.min(0.95, 1 - upBias * 1.3))
+    };
+    state = 'shooting';
+    powerWrap.style.display = 'none';
+    launchShot();
+  }
+
+  canvas.addEventListener('mousedown', onStart);
+  canvas.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onEnd);
+  canvas.addEventListener('touchstart', onStart, { passive: true });
+  canvas.addEventListener('touchmove', onMove, { passive: true });
+  canvas.addEventListener('touchend', onEnd);
+
+  function launchShot() {
+    hud.textContent = 'Shooting...';
+    const gx = goal.x - goal.w / 2;
+    const targetX = gx + goal.w * (0.5 + shotTarget.nx * 0.42);
+    const targetY = goal.y + goal.h * shotTarget.ny;
+
+    const correctChance = 0.32 + round * 0.04;
+    let keeperGuessNx = Math.random() < correctChance ? shotTarget.nx : shotTarget.nx * -1;
+    keeper.dir = keeperGuessNx >= 0 ? 1 : -1;
+    keeper.diving = true;
+    keeper.t = 0;
+
+    ballAnim = {
+      sx: ball.x, sy: ball.y,
+      ex: targetX, ey: targetY,
+      t: 0,
+      duration: 38 - shotPower * 10
+    };
+    requestAnimationFrame(animateShot);
+  }
+
+  function drawAnimatedBall() {
+    const a = ballAnim;
+    const progress = a.t / a.duration;
+    const x = a.sx + (a.ex - a.sx) * progress;
+    const y = a.sy + (a.ey - a.sy) * progress - Math.sin(progress * Math.PI) * 40 * shotPower;
+    const prevX = ball.x, prevY = ball.y;
+    ball.x = x; ball.y = y;
+    drawBall();
+  }
+
+  function animateShot() {
+    if (state !== 'shooting' || !ballAnim) return;
+    ballAnim.t += 1;
+    keeper.t = Math.min(1, keeper.t + 0.07);
+    draw();
+    if (ballAnim.t >= ballAnim.duration) {
+      resolveShot();
+      return;
+    }
+    requestAnimationFrame(animateShot);
+  }
+
+  function resolveShot() {
+    const gx = goal.x - goal.w / 2;
+    const keeperFinalX = gx + goal.w * (0.5 + keeper.dir * 0.32 * keeper.t);
+    const distToKeeper = Math.abs(ballAnim.ex - keeperFinalX);
+    const saveRange = goal.w * 0.16 * (1 - shotPower * 0.4);
+    const correctSide = (keeper.dir > 0 && shotTarget.nx > 0) || (keeper.dir < 0 && shotTarget.nx < 0) || Math.abs(shotTarget.nx) < 0.12;
+    const saved = correctSide && distToKeeper < saveRange && shotTarget.ny > 0.15;
+
+    if (saved) {
+      cpuScore++;
+      cpuScoreEl.textContent = cpuScore;
+      resultBanner.textContent = '🧤 SAVED!';
+      resultBanner.className = 'result-banner saved';
+    } else {
+      youScore++;
+      youScoreEl.textContent = youScore;
+      resultBanner.textContent = '⚽ GOAL!';
+      resultBanner.className = 'result-banner goal';
+    }
+    state = 'result';
+    hud.textContent = saved ? 'The keeper got a hand to it' : 'Back of the net!';
+    ballAnim = null;
+    draw();
+
+    setTimeout(nextRound, 1300);
+  }
+
+  function nextRound() {
+    if (round >= TOTAL_ROUNDS) {
+      endGame();
+      return;
+    }
+    round++;
+    resetRoundState();
+    draw();
+  }
+
+  function endGame() {
+    state = 'done';
+    const win = youScore > cpuScore;
+    const isDraw = youScore === cpuScore;
+    overlayTitle.textContent = win ? 'YOU WIN! 🏆' : isDraw ? "IT'S A DRAW" : 'GAME OVER';
+    overlayTitle.className = win ? 'win' : isDraw ? '' : 'lose';
+    overlaySub.textContent = `Final score — You ${youScore} : ${cpuScore} CPU`;
+    overlay.classList.add('show');
+  }
+
+  resetBtn.addEventListener('click', fullReset);
+  playAgainBtn.addEventListener('click', fullReset);
+  window.addEventListener('resize', resize);
+
+  resize();
+  resetRoundState();
+
+  function frame() {
+    if (state !== 'shooting') draw();
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
 </script>
 
 </body>
